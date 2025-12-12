@@ -8,7 +8,7 @@ from print_utils import *
 filename_date_format = "%Y-%m-%d_%H-%M-%S"
 
 
-def get_creation_date(filepath):
+def get_creation_date(filepath) -> datetime:
     try:
         stat = os.stat(filepath)
 
@@ -21,6 +21,21 @@ def get_creation_date(filepath):
     except Exception as e:
         print(f"Ошибка при получении даты создания: {e}")
         return None
+
+
+def filename_from_date(date: datetime, for_path: str = "", ext: str = "") -> str:
+    new_name = date_name = date.strftime(filename_date_format)
+    if not for_path:
+        return new_name + ext
+
+    counter = 1
+    while True:
+        filepath = os.path.join(for_path, new_name + ext)
+        if not os.path.exists(filepath): break
+        new_name = f"{date_name}_{counter}"
+        counter += 1
+
+    return filepath
 
 
 def rename_files_using_dates(folder_path: str, extensions: list[str], recursive: bool):
@@ -46,17 +61,12 @@ def rename_files_using_dates(folder_path: str, extensions: list[str], recursive:
         if ext.strip('.').lower() not in extensions:
             continue
 
-        new_name = date_name = get_creation_date(item_path).strftime(filename_date_format)
+        creation_date = get_creation_date(item_path)
+        new_name = filename_from_date(creation_date)
         if new_name == name:
             continue
 
-        counter = 1
-        while True:
-            new_filepath = os.path.join(folder_path, new_name + ext)
-            if not os.path.exists(new_filepath): break
-            new_name = f"{date_name}_{counter}"
-            counter += 1
-
+        new_filepath = filename_from_date(creation_date, folder_path, ext)
         os.rename(item_path, new_filepath)
         print(f"{folder_path} : {item} → {os.path.basename(new_filepath)}")
 
@@ -70,7 +80,7 @@ if __name__ == "__main__":
         print_error("Ошибка: указанный путь не существует или не является папкой.")
         exit(1)
 
-    print(text_green("Будем переименовывать файлы по пути: "), Path(folder).resolve())
+    print(text_green("Будем переименовывать файлы по пути: "), Path(folder).expanduser().resolve())
 
     ext_text = input("Введите расширения файлов (через запятую): ").strip().lower()
     ext_list = [item for item in re.split(r'[.,\s]+', ext_text) if item and item != "py"]
