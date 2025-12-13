@@ -1,14 +1,14 @@
 import os
-import re
 from datetime import datetime
 from pathlib import Path
 
+from extension_mapper import ExtensionMapper
 from print_utils import *
 
 filename_date_format = "%Y-%m-%d_%H-%M-%S"
 
 
-def get_creation_date(filepath) -> datetime:
+def get_creation_date(filepath):
     try:
         stat = os.stat(filepath)
 
@@ -24,6 +24,10 @@ def get_creation_date(filepath) -> datetime:
 
 
 def filename_from_date(date: datetime, for_path: str = "", ext: str = "") -> str:
+    ext = ext.strip(".")
+    if len(ext) > 0:
+        ext = "." + ext
+
     new_name = date_name = date.strftime(filename_date_format)
     if not for_path:
         return new_name + ext
@@ -38,12 +42,14 @@ def filename_from_date(date: datetime, for_path: str = "", ext: str = "") -> str
     return filepath
 
 
-def rename_files_using_dates(folder_path: str, extensions: list[str], recursive: bool):
+def rename_files_using_dates(folder_path: str, extensions_str: str, recursive: bool):
     try:
         items = os.listdir(folder_path)
     except PermissionError:
         print_error(f"Нет доступа к папке: {folder_path}")
         return
+
+    mapper = ExtensionMapper(extensions_str)
 
     for item in items:
         # Не обрабатываем скрытые файлы и папки (macOS)
@@ -52,18 +58,19 @@ def rename_files_using_dates(folder_path: str, extensions: list[str], recursive:
         item_path = os.path.join(folder_path, item)
 
         if os.path.isdir(item_path) and recursive == True:
-            rename_files_using_dates(item_path, extensions, recursive)
+            rename_files_using_dates(item_path, extensions_str, recursive)
 
         elif not os.path.isfile(item_path):
             continue
 
         name, ext = os.path.splitext(item)
-        if ext.strip('.').lower() not in extensions:
+        ext = mapper.get_mapped_extension(ext.strip('.').lower())
+        if ext is None:
             continue
 
         creation_date = get_creation_date(item_path)
-        new_name = filename_from_date(creation_date)
-        if new_name == name:
+        new_name = filename_from_date(creation_date, ext=ext)
+        if new_name == item:
             continue
 
         new_filepath = filename_from_date(creation_date, folder_path, ext)
@@ -83,15 +90,9 @@ if __name__ == "__main__":
     print(text_green("Будем переименовывать файлы по пути: "), Path(folder).expanduser().resolve())
 
     ext_text = input("Введите расширения файлов (через запятую): ").strip().lower()
-    ext_list = [item for item in re.split(r'[.,\s]+', ext_text) if item and item != "py"]
-    if len(ext_list) == 0:
-        print_error("Не указаны валидные расширения файлов.")
-        exit(1)
-
-    print(text_green("Будем переименовывать файлы с расширениями: "), ext_list)
 
     include_sub = input("Обработать вложенные папки? (y/n): ").strip().lower() == "y"
 
     print(text_separator())
-    rename_files_using_dates(folder, ext_list, include_sub)
+    rename_files_using_dates(folder, ext_text, include_sub)
     print_success("Все подходящие файлы переименованы.")
