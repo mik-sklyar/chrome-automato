@@ -3,13 +3,31 @@ from download_image import download_image
 from print_utils import *
 
 
-async def save_image_and_refresh(page, scheme: Scheme):
+async def _get_refresh_button(page, scheme: Scheme):
+    try:
+        elements = await page.xpath(scheme.edit_xpath)
+        if len(elements) == 0:
+            raise Exception()
+        textedit = elements[0]
+    except:
+        return None
+
+    await textedit.click()
+    await page.sleep(1)
+
     try:
         elements = await page.xpath(scheme.refresh_xpath)
         if len(elements) == 0:
             raise Exception()
         button = elements[0]
     except:
+        return None
+
+    return button
+
+async def save_image_and_refresh(page, scheme: Scheme):
+    button = await _get_refresh_button(page, scheme)
+    if button is None:
         return
 
     try:
@@ -21,25 +39,9 @@ async def save_image_and_refresh(page, scheme: Scheme):
     except Exception as e:
         print_error(f"Ошибка поиска картинки: {e}")
 
-
 async def save_two_images_and_refresh(page, scheme: Scheme):
-    try:
-        elements = await page.xpath(scheme.edit_xpath)
-        if len(elements) == 0:
-            raise Exception()
-        textedit = elements[0]
-    except:
-        return
-
-    await textedit.click()
-    await page.sleep(1)
-
-    try:
-        elements = await page.xpath(scheme.refresh_xpath)
-        if len(elements) == 0:
-            raise Exception()
-        button = elements[0]
-    except:
+    button = _get_refresh_button(page, scheme)
+    if button is None:
         return
 
     try:
