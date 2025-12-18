@@ -6,7 +6,7 @@ from extension_mapper import ExtensionMapper
 from print_utils import *
 
 filename_date_format = "%Y-%m-%d_%H-%M-%S"
-
+_verbose = False
 
 def get_creation_date(filepath):
     try:
@@ -19,7 +19,7 @@ def get_creation_date(filepath):
         # Linux, Windows
         return datetime.fromtimestamp(stat.st_ctime)
     except Exception as e:
-        print(f"Ошибка при получении даты создания: {e}")
+        if _verbose: print(f"Ошибка при получении даты создания: {e}")
         return None
 
 
@@ -46,7 +46,7 @@ def rename_files_using_dates(folder_path: str, extensions_str: str, recursive: b
     try:
         items = os.listdir(folder_path)
     except PermissionError:
-        print_error(f"Нет доступа к папке: {folder_path}")
+        if _verbose: print_error(f"Нет доступа к папке: {folder_path}")
         return
 
     mapper = ExtensionMapper(extensions_str)
@@ -75,10 +75,11 @@ def rename_files_using_dates(folder_path: str, extensions_str: str, recursive: b
 
         new_filepath = filename_from_date(creation_date, folder_path, ext)
         os.rename(item_path, new_filepath)
-        print(f"{folder_path} : {item} → {os.path.basename(new_filepath)}")
+        if _verbose: print(f"{folder_path} : {item} → {os.path.basename(new_filepath)}")
 
 
 if __name__ == "__main__":
+    _verbose = True
     print("Переименование файлов по дате создания")
     folder = input("Введите путь к папке (или нажмите Enter для текущей): ").strip()
     if not folder: folder = "."
