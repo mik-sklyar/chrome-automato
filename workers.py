@@ -40,7 +40,7 @@ async def save_image_and_refresh(page, scheme: Scheme):
         print_error(f"Ошибка поиска картинки: {e}")
 
 async def save_two_images_and_refresh(page, scheme: Scheme):
-    button = _get_refresh_button(page, scheme)
+    button = await _get_refresh_button(page, scheme)
     if button is None:
         return
 
