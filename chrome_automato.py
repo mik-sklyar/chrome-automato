@@ -12,15 +12,15 @@ async def main(user_path: str, scheme: Scheme):
     print_success(f"Запуск браузера для пользователя [{user_path}] и схемы работы [{scheme.name}]")
     print(text_separator('='))
 
-    profile_path = os.path.join(Path(__file__).parent.absolute(), "ChromeAccounts", user_path)
+    profile_path = os.path.join(Path(__file__).parent.absolute(), Config.users_path.value, user_path)
     browser = await nr.start(headless=False, user_data_dir=profile_path)
+
+    page = await browser.get("https://google.com")
+    # wait for Adblock initialization
+    await page.wait(10)
     page = await browser.get(scheme.url)
 
-    # reload for Adblock initialization
-    await page.wait(5)
-    page = await browser.get(scheme.url)
-
-    work_func = [save_image_and_refresh, save_two_images_and_refresh][scheme.identifier]
+    work_func = [save_image_and_refresh, save_two_images_and_refresh][scheme.id]
 
     input("Настрой что надо и нажми Enter для начала работы...")
 
@@ -36,6 +36,7 @@ async def main(user_path: str, scheme: Scheme):
 if __name__ == '__main__':
     unify_downloads()
 
+    print_success("Добро пожаловать в Chrome-Automato! Давай-ка накачаем не скучных картинок (*‿*)")
     users = Config.users.value
     users_str = ", ".join(map(lambda i_u: f"[{i_u[0] + 1}][{text_green(i_u[1])}]", enumerate(users)))
     choice = input(f"Выберите пользователя {users_str}:").strip()
@@ -43,9 +44,8 @@ if __name__ == '__main__':
     try:
         user_index = int(choice) - 1
         if user_index < 0 or user_index > len(users): raise ValueError
-    except KeyboardInterrupt as e:
-        raise e
-    except Exception:
+    except Exception as e:
+        if isinstance(e, KeyboardInterrupt): raise
         user_index = 0
 
     schemes = Config.schemes.value
@@ -55,9 +55,8 @@ if __name__ == '__main__':
     try:
         scheme_index = int(choice) - 1
         if scheme_index < 0 or scheme_index > len(schemes): raise ValueError
-    except KeyboardInterrupt as e:
-        raise e
-    except Exception:
+    except Exception as e:
+        if isinstance(e, KeyboardInterrupt): raise
         scheme_index = 0
 
     nr.loop().run_until_complete(main(users[user_index], schemes[scheme_index]))
