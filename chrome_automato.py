@@ -1,10 +1,14 @@
 import os
+import threading
 from pathlib import Path
 
 import nodriver as nr
 
 from unify_downloads import unify_downloads
 from workers import *
+
+_needs_pause = True
+_needs_exit = False
 
 
 async def main(user_path: str, scheme: Scheme):
@@ -14,23 +18,42 @@ async def main(user_path: str, scheme: Scheme):
 
     profile_path = os.path.join(Path(__file__).parent.absolute(), Config.users_path.value, user_path)
     browser = await nr.start(headless=False, user_data_dir=profile_path)
-
-    page = await browser.get("https://google.com")
-    # wait for Adblock initialization
-    await page.wait(10)
+    print("Ждём пока загрузится браузер и раздуплится Adblock...")
+    await browser.wait(10)
     page = await browser.get(scheme.url)
 
     work_func = [save_image_and_refresh, save_two_images_and_refresh][scheme.id]
 
-    input("Настрой что надо и нажми Enter для начала работы...")
+    is_paused = False
+    seconds_count = 0
 
-    print(text_separator())
-    print_success("Работаем :)")
+    while not _needs_exit:
+        if _needs_pause:
+            if not is_paused:
+                print("Настрой что надо и нажми Enter для начала работы...")
+                is_paused = True
+            await page.sleep(1)
+            continue
+        else:
+            if is_paused:
+                print(text_separator())
+                print_success("Работаем :)")
+                seconds_count = scheme.waiting_period
+                is_paused = False
 
-    while True:
+        await page.sleep(1)
+        seconds_count += 1
+        if seconds_count < scheme.waiting_period:
+            print(".", end="", flush=True)
+            continue
+
+        print("")
         await work_func(page, scheme)
-        await page.sleep(30)
-        print("...")
+        seconds_count = 0
+
+
+def start_main_with_event_loop(user_path: str, scheme: Scheme):
+    nr.loop().run_until_complete(main(user_path, scheme))
 
 
 if __name__ == '__main__':
@@ -59,4 +82,11 @@ if __name__ == '__main__':
         if isinstance(e, KeyboardInterrupt): raise
         scheme_index = 0
 
-    nr.loop().run_until_complete(main(users[user_index], schemes[scheme_index]))
+    threading.Thread(target=start_main_with_event_loop, args=(users[user_index], schemes[scheme_index]),
+                     daemon=True).start()
+    while True:
+        choice = input()
+        if choice.strip().lower() == "q":
+            _needs_exit = True; break
+        else:
+            _needs_pause = not _needs_pause

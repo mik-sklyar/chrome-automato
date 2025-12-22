@@ -3,7 +3,7 @@ from enum import Enum
 class Scheme:
     __obj_count = 0
 
-    def __init__(self, name, url, edit_xpath, image_xpath, refresh_xpath, download_path):
+    def __init__(self, name, url, edit_xpath, image_xpath, refresh_xpath, download_path, waiting_period):
         self.id = Scheme.__obj_count; Scheme.__obj_count += 1
         self.name = name
         self.url = url
@@ -11,6 +11,7 @@ class Scheme:
         self.image_xpath = image_xpath
         self.refresh_xpath = refresh_xpath
         self.download_path = download_path
+        self.waiting_period = waiting_period
 
 class Config(Enum):
     schemes = [
@@ -19,13 +20,15 @@ class Config(Enum):
                '',
                'some usual image xpath',
                'some usual button xpath',
-               'Downloads'),
+               'Downloads',
+               15),
         Scheme('Особенная',
                'another url',
                'some xpath for textarea',
                'another image xpath',
                'another button xpath"]',
-               'Downloads')
+               'Downloads',
+               15),
     ]
-    users = ["user1", "user2", "user3"]
     users_path = 'ChromeAccounts'
+    users = ["user1", "user2", "user3"]
